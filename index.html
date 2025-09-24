@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telfer Digital Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            height: 100vh;
+            background: #FFFFFF;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Avatar Card */
+        .avatar-card {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 360px;
+            height: 550px;
+            background: #FFFFFF;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            z-index: 9998;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px) scale(0.95);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .avatar-card.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+        }
+
+        .avatar-card-header {
+            padding: 12px 20px;
+            background: #F8F9FA;
+            border-bottom: 1px solid #E9ECEF;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .avatar-card-title {
+            font-weight: 600;
+            font-size: 1rem;
+            color: #212529;
+        }
+
+        .status-indicator {
+            padding: 4px 10px;
+            background: rgba(22, 163, 74, 0.1);
+            color: #15803d;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #16a34a;
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .avatar-card-close {
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: #E9ECEF;
+            color: #6C757D;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .avatar-card-close:hover {
+            background: #DEE2E6;
+            transform: scale(1.1);
+        }
+
+        .avatar-card-body {
+            position: relative;
+            flex-grow: 1;
+            background: #FAFBFC;
+        }
+
+        /* Ultra Enhanced Loader */
+        .card-loader {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 30px;
+            z-index: 10;
+            overflow: hidden;
+        }
+
+        /* Animated Background Pattern */
+        .card-loader::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(255, 255, 255, 0.03) 10px,
+                rgba(255, 255, 255, 0.03) 20px
+            );
+            animation: backgroundMove 20s linear infinite;
+        }
+
+        @keyframes backgroundMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        /* Floating Particles */
+        .particles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            animation: floatUp 4s infinite linear;
+        }
+
+        .particle:nth-child(1) { left: 10%; width: 3px; height: 3px; animation-delay: 0s; animation-duration: 8s; }
+        .particle:nth-child(2) { left: 20%; width: 2px; height: 2px; animation-delay: 1s; animation-duration: 6s; }
+        .particle:nth-child(3) { left: 30%; width: 4px; height: 4px; animation-delay: 2s; animation-duration: 10s; }
+        .particle:nth-child(4) { left: 40%; width: 2px; height: 2px; animation-delay: 0.5s; animation-duration: 7s; }
+        .particle:nth-child(5) { left: 50%; width: 3px; height: 3px; animation-delay: 1.5s; animation-duration: 9s; }
+        .particle:nth-child(6) { left: 60%; width: 2px; height: 2px; animation-delay: 2.5s; animation-duration: 5s; }
+        .particle:nth-child(7) { left: 70%; width: 4px; height: 4px; animation-delay: 0.8s; animation-duration: 8s; }
+        .particle:nth-child(8) { left: 80%; width: 3px; height: 3px; animation-delay: 1.2s; animation-duration: 6s; }
+        .particle:nth-child(9) { left: 90%; width: 2px; height: 2px; animation-delay: 0.3s; animation-duration: 11s; }
+        .particle:nth-child(10) { left: 95%; width: 3px; height: 3px; animation-delay: 2s; animation-duration: 7s; }
+
+        @keyframes floatUp {
+            0% { bottom: -10%; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { bottom: 110%; opacity: 0; }
+        }
+        
+        .card-loader.active {
+            display: flex;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .loader-content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 25px;
+        }
+
+        /* Morphing Loader Animation */
+        .morph-loader {
+            width: 80px;
+            height: 80px;
+            position: relative;
+        }
+
+        .morph-shape {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: white;
+            animation: morph 3s ease-in-out infinite;
+        }
+
+        @keyframes morph {
+            0%, 100% {
+                border-radius: 50%;
+                transform: rotate(0deg) scale(1);
+            }
+            25% {
+                border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+                transform: rotate(90deg) scale(0.9);
+            }
+            50% {
+                border-radius: 50%;
+                transform: rotate(180deg) scale(0.8);
+            }
+            75% {
+                border-radius: 70% 30% 30% 70% / 70% 70% 30% 30%;
+                transform: rotate(270deg) scale(0.9);
+            }
+        }
+
+        /* Animated Text */
+        .loading-text {
+            color: white;
+            font-weight: 600;
+            font-size: 1.1rem;
+            position: relative;
+            letter-spacing: 1px;
+        }
+
+        .loading-text span {
+            display: inline-block;
+            animation: textWave 1.5s ease-in-out infinite;
+        }
+
+        .loading-text span:nth-child(1) { animation-delay: 0s; }
+        .loading-text span:nth-child(2) { animation-delay: 0.1s; }
+        .loading-text span:nth-child(3) { animation-delay: 0.2s; }
+        .loading-text span:nth-child(4) { animation-delay: 0.3s; }
+        .loading-text span:nth-child(5) { animation-delay: 0.4s; }
+        .loading-text span:nth-child(6) { animation-delay: 0.5s; }
+        .loading-text span:nth-child(7) { animation-delay: 0.6s; }
+        .loading-text span:nth-child(8) { animation-delay: 0.7s; }
+        .loading-text span:nth-child(9) { animation-delay: 0.8s; }
+        .loading-text span:nth-child(10) { animation-delay: 0.9s; }
+        .loading-text span:nth-child(11) { animation-delay: 1s; }
+        .loading-text span:nth-child(12) { animation-delay: 1.1s; }
+
+        @keyframes textWave {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* Multi-Stage Progress Bar */
+        .progress-container {
+            width: 250px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .progress-stages {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .stage {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.7);
+            transition: color 0.3s ease;
+        }
+
+        .stage.active {
+            color: white;
+        }
+
+        .stage-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .stage.active .stage-dot {
+            background: white;
+            transform: scale(1.3);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+        }
+
+        .progress-bar-wrapper {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, rgba(255,255,255,0.8), white);
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.8s ease;
+            position: relative;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            filter: blur(8px);
+            animation: glow 1s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        /* Chat Launcher */
+        .chat-launcher {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .chat-text-animation {
+            color: #4a5568;
+            background: white;
+            padding: 8px 16px;
+            border-radius: 16px;
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            opacity: 0;
+            animation: float-fade 4s ease-in-out infinite;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .chat-text-animation.hide {
+            opacity: 0 !important;
+            transform: translateY(10px);
+            animation: none;
+        }
+
+        @keyframes float-fade {
+            0%, 100% { opacity: 0; transform: translateY(10px); }
+            50% { opacity: 1; transform: translateY(0); }
+        }
+
+        .chat-button {
+            width: 70px;
+            height: 70px;
+            background: #FFFFFF;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+        }
+
+        .chat-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
+        }
+
+        .chat-button img {
+            width: 100%;
+            height: auto;
+            border-radius: 50%;
+        }
+
+        /* Contact Form Modal */
+        .contact-form-modal {
+            position: fixed;
+            bottom: 120px;
+            right: 30px;
+            border-radius: 20px;
+            padding: 2rem;
+            width: 340px;
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .contact-form-modal.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .contact-form-modal h3 { text-align: center; margin-bottom: 0.5rem; color: #2d3748; font-size: 1.4rem; font-weight: 600; }
+        .form-info-text { text-align: center; color: #667eea; font-size: 0.95rem; margin-bottom: 1.8rem; font-weight: 500; }
+        .form-group { margin-bottom: 1.2rem; }
+        .form-group label { display: block; margin-bottom: 0.4rem; color: #2d3748; font-weight: 600; font-size: 0.95rem; }
+        .form-group input { width: 100%; padding: 0.8rem 1rem; border: 2px solid rgba(102, 126, 234, 0.2); border-radius: 12px; font-size: 0.95rem; transition: all 0.3s ease; background: rgba(255, 255, 255, 0.8); }
+        .form-group input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); background: white; }
+        .form-actions { display: flex; gap: 0.8rem; margin-top: 1.8rem; }
+        .form-btn { flex: 1; padding: 0.9rem 1.2rem; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-size: 0.95rem; }
+        .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4); }
+        .btn-secondary { background: rgba(113, 128, 150, 0.1); color: #4a5568; border: 1px solid rgba(113, 128, 150, 0.2); }
+        .btn-secondary:hover { background: rgba(113, 128, 150, 0.15); transform: translateY(-1px); }
+
+        /* HeyGen Avatar Styles */
+        #heygen-streaming-embed {
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%;
+            border-radius: 0 0 18px 18px; 
+            overflow: hidden;
+            opacity: 0; 
+            visibility: hidden; 
+            transition: opacity 0.5s ease;
+        }
+        
+        #heygen-streaming-embed.show { 
+            opacity: 1; 
+            visibility: visible; 
+        }
+        
+        #heygen-streaming-embed iframe { 
+            width: 100%; 
+            height: 100%; 
+            border: 0; 
+        }
+
+        /* Success Animation */
+        .success-checkmark {
+            width: 80px;
+            height: 80px;
+            position: relative;
+            display: none;
+        }
+
+        .success-checkmark.show {
+            display: block;
+            animation: scaleIn 0.5s ease;
+        }
+
+        @keyframes scaleIn {
+            from { transform: scale(0); }
+            to { transform: scale(1); }
+        }
+
+        .checkmark-circle {
+            stroke-dasharray: 166;
+            stroke-dashoffset: 166;
+            stroke-width: 3;
+            stroke: white;
+            fill: none;
+            animation: strokeCircle 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+        }
+
+        .checkmark-check {
+            transform-origin: 50% 50%;
+            stroke-dasharray: 48;
+            stroke-dashoffset: 48;
+            stroke: white;
+            fill: none;
+            stroke-width: 3;
+            animation: strokeCheck 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.5s forwards;
+        }
+
+        @keyframes strokeCircle {
+            to { stroke-dashoffset: 0; }
+        }
+
+        @keyframes strokeCheck {
+            to { stroke-dashoffset: 0; }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 480px) {
+            .contact-form-modal, .avatar-card {
+                width: calc(100vw - 40px);
+                right: 20px;
+                bottom: 20px;
+            }
+            .contact-form-modal { bottom: 100px; }
+            .chat-launcher { bottom: 20px; right: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="chat-launcher" id="chatLauncher">
+        <div class="chat-text-animation" id="floatingText">Talk with Telfer Assistant</div>
+        <button class="chat-button" id="chatToggle">
+            <img src="telfer.png" alt="Telfer Digital Logo">
+        </button>
+    </div>
+
+    <div class="contact-form-modal" id="contactFormModal">
+        <h3>Let's Get Started!</h3>
+        <div class="form-info-text">Please provide your details to see our assistant.</div>
+        <div class="form-group">
+            <label for="userName">Your Name *</label>
+            <input type="text" id="userName" placeholder="Enter your full name" required>
+        </div>
+        <div class="form-group">
+            <label for="userEmail">Email Address *</label>
+            <input type="email" id="userEmail" placeholder="Enter your email" required>
+        </div>
+        <div class="form-actions">
+            <button class="form-btn btn-secondary" id="cancelBtn">Cancel</button>
+            <button class="form-btn btn-primary" id="continueBtn">Continue</button>
+        </div>
+    </div>
+
+    <div class="avatar-card" id="avatarCard">
+        <div class="avatar-card-header">
+            <div class="avatar-card-title">Telfer Assistant</div>
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span>Active</span>
+            </div>
+            <button class="avatar-card-close" id="avatarCloseBtn">×</button>
+        </div>
+        <div class="avatar-card-body" id="avatarCardBody">
+            <div class="card-loader" id="cardLoader">
+                <div class="particles">
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                </div>
+                <div class="loader-content">
+                    <div class="morph-loader">
+                        <div class="morph-shape"></div>
+                    </div>
+                    <p class="loading-text">
+                        <span>C</span><span>o</span><span>n</span><span>n</span><span>e</span><span>c</span><span>t</span><span>i</span><span>n</span><span>g</span><span>.</span><span>.</span><span>.</span>
+                    </p>
+                    <div class="progress-container">
+                        <div class="progress-stages">
+                            <div class="stage" id="stage1">
+                                <div class="stage-dot"></div>
+                                <span>Initialize</span>
+                            </div>
+                            <div class="stage" id="stage2">
+                                <div class="stage-dot"></div>
+                                <span>Connect</span>
+                            </div>
+                            <div class="stage" id="stage3">
+                                <div class="stage-dot"></div>
+                                <span>Ready</span>
+                            </div>
+                        </div>
+                        <div class="progress-bar-wrapper">
+                            <div class="progress-bar" id="progressBar"></div>
+                        </div>
+                    </div>
+                    <svg class="success-checkmark" id="successCheck" viewBox="0 0 52 52">
+                        <circle class="checkmark-circle" cx="26" cy="26" r="25"/>
+                        <path class="checkmark-check" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // --- Session Management ---
+        let userAuthenticated = false;
+        let userData = null;
+        
+        // Check if user data exists in session
+        if (sessionStorage.getItem('telferUserData')) {
+            userAuthenticated = true;
+            userData = JSON.parse(sessionStorage.getItem('telferUserData'));
+        }
+        
+        // --- Performance-Optimized Variables ---
+        let avatarReady = false;
+        let iframeElement = null;
+        let avatarContainer = null;
+        let heygenConnected = false;
+        
+        const chatToggle = document.getElementById('chatToggle');
+        const chatLauncher = document.getElementById('chatLauncher');
+        const floatingText = document.getElementById('floatingText');
+        const contactFormModal = document.getElementById('contactFormModal');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const continueBtn = document.getElementById('continueBtn');
+        const userNameInput = document.getElementById('userName');
+        const userEmailInput = document.getElementById('userEmail');
+        const avatarCard = document.getElementById('avatarCard');
+        const avatarCardBody = document.getElementById('avatarCardBody');
+        const avatarCloseBtn = document.getElementById('avatarCloseBtn');
+        const cardLoader = document.getElementById('cardLoader');
+        const progressBar = document.getElementById('progressBar');
+        const successCheck = document.getElementById('successCheck');
+        let isContactFormOpen = false;
+
+        // HeyGen Configuration
+        const host = "https://labs.heygen.com";
+        const avatarUrl = host + "/guest/streaming-embed?share=eyJxdWFsaXR5IjoiaGlnaCIsImF2YXRhck5hbWUiOiJTaWxhc0hSX3B1YmxpYyIsInByZXZpZXdJ%0D%0AbWciOiJodHRwczovL2ZpbGVzMi5oZXlnZW4uYWkvYXZhdGFyL3YzLzU4MmVlOGZlMDcyYTQ4ZmRh%0D%0AM2JjNjgyNDFhZWZmNjYwXzQ1NjYwL3ByZXZpZXdfdGFyZ2V0LndlYnAiLCJuZWVkUmVtb3ZlQmFj%0D%0Aa2dyb3VuZCI6ZmFsc2UsImtub3dsZWRnZUJhc2VJZCI6IjE2ZjZiMGU3M2YxOTRmY2NiMjQwMmM4%0D%0AMjlkZDhkYjQyIiwidXNlcm5hbWUiOiI1YTkyY2MyNDU5YWQ0YzU4YTcxNTkzYzFlODg2MmFkNSJ9&inIFrame=1";
+        
+        // Pre-establish connections
+        const preconnect = document.createElement('link');
+        preconnect.rel = 'preconnect';
+        preconnect.href = host;
+        preconnect.crossOrigin = 'anonymous';
+        document.head.appendChild(preconnect);
+
+        const dns = document.createElement('link');
+        dns.rel = 'dns-prefetch';
+        dns.href = host;
+        document.head.appendChild(dns);
+
+        // Preload the HeyGen page
+        const prefetch = document.createElement('link');
+        prefetch.rel = 'prefetch';
+        prefetch.href = avatarUrl;
+        document.head.appendChild(prefetch);
+
+        // Progress Animation Manager
+        function updateProgress(percent, stage) {
+            progressBar.style.width = percent + '%';
+            
+            // Update stages
+            if (stage >= 1) document.getElementById('stage1').classList.add('active');
+            if (stage >= 2) document.getElementById('stage2').classList.add('active');
+            if (stage >= 3) document.getElementById('stage3').classList.add('active');
+        }
+
+        function showSuccess() {
+            document.querySelector('.morph-loader').style.display = 'none';
+            document.querySelector('.loading-text').style.display = 'none';
+            successCheck.classList.add('show');
+        }
+
+        // Reset loader for reuse
+        function resetLoader() {
+            progressBar.style.width = '0%';
+            document.getElementById('stage1').classList.remove('active');
+            document.getElementById('stage2').classList.remove('active');
+            document.getElementById('stage3').classList.remove('active');
+            document.querySelector('.morph-loader').style.display = 'block';
+            document.querySelector('.loading-text').style.display = 'block';
+            successCheck.classList.remove('show');
+        }
+
+        // Pre-create and cache iframe
+        function preCreateIframe() {
+            if (iframeElement) return;
+            
+            avatarContainer = document.createElement("div");
+            avatarContainer.id = "heygen-streaming-embed";
+            
+            iframeElement = document.createElement("iframe");
+            iframeElement.allow = "microphone; camera";
+            iframeElement.src = avatarUrl;
+            iframeElement.loading = "eager";
+            iframeElement.importance = "high";
+            iframeElement.setAttribute('allowfullscreen', 'true');
+            
+            // Keep it ready but hidden
+            avatarContainer.style.position = 'absolute';
+            avatarContainer.style.left = '-9999px';
+            avatarContainer.style.width = '360px';
+            avatarContainer.style.height = '550px';
+            avatarContainer.style.display = 'block';
+            avatarContainer.style.visibility = 'hidden';
+            
+            avatarContainer.appendChild(iframeElement);
+            document.body.appendChild(avatarContainer);
+            
+            // Listen for HeyGen ready signal
+            iframeElement.onload = () => {
+                heygenConnected = true;
+                console.log('HeyGen iframe loaded and ready');
+            };
+        }
+
+        // Show loading animation for exactly 3 seconds
+        function showLoadingAnimation(callback) {
+            // Always reset and show loader
+            resetLoader();
+            cardLoader.classList.add('active');
+            cardLoader.style.display = 'flex';
+            
+            // Timed progress updates over 3 seconds
+            setTimeout(() => updateProgress(15, 1), 200);     // 0.2s - Start Initialize
+            setTimeout(() => updateProgress(30, 1), 500);     // 0.5s
+            setTimeout(() => updateProgress(45, 1), 800);     // 0.8s
+            setTimeout(() => updateProgress(55, 2), 1100);    // 1.1s - Start Connect
+            setTimeout(() => updateProgress(70, 2), 1400);    // 1.4s
+            setTimeout(() => updateProgress(80, 2), 1700);    // 1.7s
+            setTimeout(() => updateProgress(90, 3), 2000);    // 2.0s - Start Ready
+            setTimeout(() => updateProgress(95, 3), 2300);    // 2.3s
+            setTimeout(() => updateProgress(100, 3), 2600);   // 2.6s - Complete
+            
+            // Show success checkmark
+            setTimeout(() => {
+                showSuccess();
+            }, 2700);
+            
+            // Hide loader and execute callback after exactly 3 seconds
+            setTimeout(() => {
+                cardLoader.classList.remove('active');
+                cardLoader.style.display = 'none';
+                if (callback) callback();
+            }, 3000);
+        }
+
+        // Initialize HeyGen Avatar
+        function initializeHeyGenAvatar() {
+            // Always show 3-second loading animation
+            showLoadingAnimation(() => {
+                // After loading animation, show the avatar
+                if (avatarContainer && iframeElement && heygenConnected) {
+                    // Reuse cached iframe for speed
+                    avatarContainer.style.position = 'absolute';
+                    avatarContainer.style.left = '0';
+                    avatarContainer.style.top = '0';
+                    avatarContainer.style.visibility = 'visible';
+                    avatarContainer.style.width = '100%';
+                    avatarContainer.style.height = '100%';
+                    
+                    // Make sure it's in the card body
+                    if (avatarContainer.parentElement !== avatarCardBody) {
+                        avatarCardBody.appendChild(avatarContainer);
+                    }
+                    
+                    // Refresh iframe content to ensure footer appears
+                    if (iframeElement.contentWindow) {
+                        iframeElement.contentWindow.postMessage({type: 'refresh'}, host);
+                    }
+                    
+                    // Show avatar
+                    setTimeout(() => {
+                        avatarContainer.classList.add('show');
+                        avatarReady = true;
+                    }, 50);
+                } else {
+                    // Fallback: Create new iframe if needed
+                    avatarContainer = document.createElement("div");
+                    avatarContainer.id = "heygen-streaming-embed";
+                    
+                    iframeElement = document.createElement("iframe");
+                    iframeElement.allow = "microphone; camera";
+                    iframeElement.src = avatarUrl;
+                    iframeElement.loading = "eager";
+                    iframeElement.setAttribute('allowfullscreen', 'true');
+                    
+                    avatarContainer.appendChild(iframeElement);
+                    avatarCardBody.appendChild(avatarContainer);
+                    
+                    setTimeout(() => {
+                        avatarContainer.classList.add('show');
+                        avatarReady = true;
+                        heygenConnected = true;
+                    }, 100);
+                }
+            });
+        }
+
+        // Reset function
+        function resetAvatar() {
+            // Hide and move iframe but keep it cached
+            if (avatarContainer) {
+                avatarContainer.classList.remove('show');
+                avatarContainer.style.position = 'absolute';
+                avatarContainer.style.left = '-9999px';
+                avatarContainer.style.visibility = 'hidden';
+                
+                // Keep it attached to body for caching
+                if (avatarContainer.parentElement !== document.body) {
+                    document.body.appendChild(avatarContainer);
+                }
+            }
+            
+            // Reset loader state
+            resetLoader();
+            cardLoader.classList.remove('active');
+            cardLoader.style.display = 'none';
+            
+            // Don't reset avatarReady - keep it true if already loaded
+        }
+
+        // Aggressive preloading on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            // Start preloading immediately
+            setTimeout(preCreateIframe, 100);
+        });
+
+        // Additional preload triggers
+        document.addEventListener('mousemove', preCreateIframe, { once: true });
+        document.addEventListener('touchstart', preCreateIframe, { once: true });
+        document.addEventListener('scroll', preCreateIframe, { once: true });
+
+        // UI Event Handlers
+        function openForm() {
+            isContactFormOpen = true;
+            contactFormModal.classList.add('show');
+        }
+
+        function closeForm() {
+            isContactFormOpen = false;
+            contactFormModal.classList.remove('show');
+        }
+
+        function openAvatar() {
+            chatLauncher.style.display = 'none';
+            avatarCard.classList.add('show');
+            
+            // Always show loading animation when opening
+            initializeHeyGenAvatar();
+        }
+
+        function closeAvatar() {
+            avatarCard.classList.remove('show');
+            chatLauncher.style.display = 'flex';
+            
+            // Show floating text again
+            floatingText.classList.remove('hide');
+            
+            // Reset for next use
+            setTimeout(resetAvatar, 300);
+        }
+
+        // Main chat button click handler
+        chatToggle.addEventListener('click', () => {
+            // Hide floating text
+            floatingText.classList.add('hide');
+            
+            // Preload iframe if not done
+            preCreateIframe();
+            
+            // Check authentication
+            if (userAuthenticated) {
+                // Go directly to avatar with loading animation
+                openAvatar();
+            } else {
+                // Show form for first-time users
+                openForm();
+            }
+        });
+
+        cancelBtn.addEventListener('click', closeForm);
+        avatarCloseBtn.addEventListener('click', closeAvatar);
+
+        continueBtn.addEventListener('click', () => {
+            const userName = userNameInput.value.trim();
+            const userEmail = userEmailInput.value.trim();
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+            if (!userName || !emailRegex.test(userEmail)) {
+                alert('Please enter a valid name and email address.');
+                return;
+            }
+
+            // Save user data
+            userData = { name: userName, email: userEmail };
+            sessionStorage.setItem('telferUserData', JSON.stringify(userData));
+            userAuthenticated = true;
+
+            closeForm();
+            openAvatar();
+        });
+
+        // Close form on outside click
+        document.addEventListener('click', (e) => {
+            if (isContactFormOpen && !contactFormModal.contains(e.target) && !chatToggle.contains(e.target)) {
+                closeForm();
+            }
+        });
+    </script>
+</body>
+</html>
